@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../../services/firebase';
+import { Storage } from 'aws-amplify';
 import { useAuth } from '../auth/AuthContext';
 import { travelApi } from '../../services/api';
 
@@ -64,10 +63,12 @@ function ImageUpload() {
       setLoading(true);
       setError('');
 
-      // Firebase Storage에 이미지 업로드
-      const storageRef = ref(storage, `travel-images/${currentUser.uid}/${Date.now()}-${image.name}`);
-      await uploadBytes(storageRef, image);
-      const imageUrl = await getDownloadURL(storageRef);
+      // Firebase Storage → S3
+      const filename = `travel-images/${currentUser.username}/${Date.now()}-${image.name}`;
+      const uploadResult = await Storage.put(filename, image, {
+        contentType: image.type
+      });
+      const imageUrl = uploadResult.key ? `https://...s3.../${uploadResult.key}` : null;
 
       // API를 통해 이미지 검색 요청
       const searchResults = await travelApi.searchByImage(image, {

@@ -1,13 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
+  signIn, 
+  signUp, 
   signOut, 
-  onAuthStateChanged,
-  GoogleAuthProvider,
-  signInWithPopup
-} from 'firebase/auth';
-import { auth } from '../../services/firebase';
+  getCurrentUser,
+  fetchAuthSession,
+  signInWithRedirect
+} from 'aws-amplify/auth';
 
 const AuthContext = createContext();
 
@@ -20,29 +19,70 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   async function signup(email, password) {
-    return createUserWithEmailAndPassword(auth, email, password);
+    try {
+      const result = await signUp({
+        username: email,
+        password: password,
+        attributes: {
+          email
+        }
+      });
+      return result;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
 
   async function login(email, password) {
-    return signInWithEmailAndPassword(auth, email, password);
+    try {
+      const user = await signIn(email, password);
+      return user;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
 
   async function logout() {
-    return signOut(auth);
+    try {
+      await signOut();
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
 
   async function loginWithGoogle() {
-    const provider = new GoogleAuthProvider();
-    return signInWithPopup(auth, provider);
+    try {
+      await signInWithRedirect('Google');
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      setLoading(false);
-    });
+    let cancelled = false;
 
-    return unsubscribe;
+    async function checkUser() {
+      try {
+        const user = await getCurrentUser();
+        if (!cancelled) {
+          setCurrentUser(user);
+          setLoading(false);
+        }
+      } catch (error) {
+        setCurrentUser(null);
+        setLoading(false);
+      }
+    }
+
+    checkUser();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const value = {

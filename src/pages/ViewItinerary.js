@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../services/firebase';
 import { useAuth } from '../components/auth/AuthContext';
 import TravelItinerary from '../components/travel/TravelItinerary';
+import { travelApi } from '../services/api';
 
 function ViewItinerary() {
   const [travelPlan, setTravelPlan] = useState(null);
@@ -17,14 +16,11 @@ function ViewItinerary() {
   useEffect(() => {
     async function fetchTravelPlan() {
       try {
-        const docRef = doc(db, 'travelPlans', id);
-        const docSnap = await getDoc(docRef);
+        const planData = await travelApi.getTravelPlan(id);
         
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          
+        if (planData) {
           // 권한 확인
-          if (data.userId !== currentUser?.uid) {
+          if (planData.userId !== currentUser?.uid) {
             setError('접근 권한이 없습니다.');
             setLoading(false);
             return;
@@ -32,11 +28,11 @@ function ViewItinerary() {
           
           // 날짜 변환
           const plan = {
-            id: docSnap.id,
-            ...data,
-            createdAt: data.createdAt?.toDate() || new Date(),
-            startDate: data.startDate?.toDate() || null,
-            endDate: data.endDate?.toDate() || null
+            id: planData.id,
+            ...planData,
+            createdAt: planData.createdAt?.toDate() || new Date(),
+            startDate: planData.startDate?.toDate() || null,
+            endDate: planData.endDate?.toDate() || null
           };
           
           setTravelPlan(plan);
@@ -51,7 +47,7 @@ function ViewItinerary() {
               const dummyItinerary = generateDummyItinerary(plan);
               
               // Firestore 업데이트
-              await updateDoc(docRef, {
+              await travelApi.updateTravelPlan(id, {
                 itinerary: dummyItinerary,
                 status: 'generated'
               });
@@ -84,8 +80,7 @@ function ViewItinerary() {
   // 여행 계획 저장
   const handleSaveItinerary = async (updatedItinerary) => {
     try {
-      const docRef = doc(db, 'travelPlans', id);
-      await updateDoc(docRef, {
+      await travelApi.updateTravelPlan(id, {
         itinerary: updatedItinerary,
         status: 'completed'
       });

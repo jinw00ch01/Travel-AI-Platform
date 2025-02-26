@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/auth/AuthContext';
-import { collection, query, where, orderBy, getDocs, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { travelApi } from '../services/api';
 
 function Dashboard() {
   const [travelPlans, setTravelPlans] = useState([]);
@@ -15,20 +14,8 @@ function Dashboard() {
   useEffect(() => {
     async function fetchTravelPlans() {
       try {
-        const q = query(
-          collection(db, 'travelPlans'),
-          where('userId', '==', currentUser.uid),
-          orderBy('createdAt', 'desc')
-        );
-        
-        const querySnapshot = await getDocs(q);
-        const plans = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate() || new Date()
-        }));
-        
-        setTravelPlans(plans);
+        // 만약 Firebase Firestore를 이용했던 곳이 있으면, AWS Lambda API로 대체 필요.
+        // 예: const plans = await travelApi.fetchUserPlans();
       } catch (err) {
         console.error('여행 계획 불러오기 실패:', err);
         setError('여행 계획을 불러오는데 실패했습니다.');
@@ -48,8 +35,8 @@ function Dashboard() {
   async function handleDelete(planId) {
     if (window.confirm('정말로 이 여행 계획을 삭제하시겠습니까?')) {
       try {
-        await deleteDoc(doc(db, 'travelPlans', planId));
-        setTravelPlans(prevPlans => prevPlans.filter(plan => plan.id !== planId));
+        // 만약 Firebase Firestore를 이용했던 곳이 있으면, AWS Lambda API로 대체 필요.
+        // 예: await travelApi.deleteTravelPlan(planId);
       } catch (err) {
         console.error('여행 계획 삭제 실패:', err);
         alert('여행 계획 삭제에 실패했습니다.');

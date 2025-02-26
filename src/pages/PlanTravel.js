@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { travelApi } from '../services/api'; // AWS Lambda 호출 API
 import { useAuth } from '../components/auth/AuthContext';
 
 function PlanTravel() {
@@ -23,36 +22,23 @@ function PlanTravel() {
       setLoading(true);
       setError('');
       
-      // 백엔드 API 호출 시뮬레이션 (실제로는 API를 호출해야 함)
-      // API 호출 대신 Firebase에 직접 저장하는 방식으로 구현
-      const travelPlan = {
-        userId: currentUser.uid,
-        destination: data.destination || '목적지 미정',
+      // 변경: AWS Lambda 호출
+      const response = await travelApi.createTravelPlan({
+        destination: data.destination,
         prompt: data.prompt,
         budget: parseFloat(data.budget) || 0,
-        startDate: data.startDate ? new Date(data.startDate) : null,
-        endDate: data.endDate ? new Date(data.endDate) : null,
+        startDate: data.startDate || null,
+        endDate: data.endDate || null,
         preferences: data.preferences || [],
-        travelers: parseInt(data.travelers) || 1,
-        status: 'pending',
-        createdAt: serverTimestamp(),
-        itinerary: null
-      };
-      
-      // 실제 프로젝트에서는 여기서 백엔드 API를 호출하여 AI 여행 계획을 생성해야 함
-      // 이 예제에서는 Firebase에 직접 저장
-      
-      const docRef = await addDoc(collection(db, 'travelPlans'), travelPlan);
-      
-      // AI 처리 시뮬레이션 (실제로는 백엔드에서 처리)
-      // 5초 후에 상태를 'generated'로 변경
-      setTimeout(() => {
-        navigate(`/itinerary/${docRef.id}`);
-      }, 2000);
-      
+        travelers: parseInt(data.travelers) || 1
+      });
+      // Lambda 내부에서 DynamoDB에 저장했다는 응답을 받는다고 가정
+
+      navigate(`/itinerary/${response.planId}`);
     } catch (err) {
       console.error('여행 계획 생성 실패:', err);
       setError('여행 계획을 생성하는데 문제가 발생했습니다. 다시 시도해주세요.');
+    } finally {
       setLoading(false);
     }
   }
